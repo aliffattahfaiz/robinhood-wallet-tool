@@ -61,11 +61,14 @@ function restoreNetworkPrefs() {
   const params = new URLSearchParams(location.search);
   let chain = params.get("chain");
   let rpc = params.get("rpc");
+  let source = "none";
+  if (chain || rpc) source = "URL";
   if (!chain && !rpc) {
     try {
       chain = localStorage.getItem("rhwt_chain");
       rpc = localStorage.getItem("rhwt_rpc");
     } catch (e) { /* storage unavailable */ }
+    if (chain || rpc) source = "localStorage";
   }
   if (!chain && !rpc) {
     for (const c of document.cookie.split("; ")) {
@@ -73,10 +76,14 @@ function restoreNetworkPrefs() {
       if (k === "rhwt_chain") chain = decodeURIComponent(v);
       if (k === "rhwt_rpc") rpc = decodeURIComponent(v);
     }
+    if (chain || rpc) source = "cookie";
   }
   if (chain && (chain === "custom" || CHAINS[chain])) $("chainSelect").value = chain;
   onChainChange();
   if (rpc) $("rpcUrl").value = rpc;
+  $("rpcHint").textContent = source === "none"
+    ? "No saved network settings on this URL: " + location.href
+    : "Restored from " + source + ". URL: " + location.href;
 }
 
 function getProvider() {
