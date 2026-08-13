@@ -179,24 +179,51 @@ function loadFundWallet() {
   }
 }
 
-function onSpreadModeChange() {
+function updateRecipientUI() {
   const same = $("spreadMode").value === "same";
+  const usd = $("unitSelect").value === "usd";
+  const unit = usd ? "USD" : "ETH";
   $("sameAmount").style.display = same ? "" : "none";
   $("sameAmountLabel").style.display = same ? "" : "none";
+  $("sameAmountLabel").textContent = "Amount in " + unit + " (sent to each address)";
+  $("sameAmount").placeholder = usd ? "5.00" : "0.01";
+  $("ethPriceLabel").style.display = usd ? "" : "none";
+  $("ethPrice").style.display = usd ? "" : "none";
   $("recipLabel").innerHTML = same
     ? "One address per line:"
-    : 'One per line: <span class="kv">address,amount</span>';
+    : 'One per line: <span class="kv">address,amount(' + unit + ')</span>';
   $("recipients").placeholder = same
     ? "0xaaa...\n0xbbb..."
     : "0xaaa...,0.01\n0xbbb...,0.02";
+}
+
+async function fetchEthUsdPrice() {
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd");
+    const data = await res.json();
+    const price = Number(data.ethereum && data.ethereum.usd);
+    if (isFinite(price) && price > 0) $("ethPrice").value = String(price);
+  } catch (e) {
+    log("Could not fetch ETH price. Enter it manually.", "warn");
+  }
+}
+
+function parseAmountToWei(str) {
+  if ($("unitSelect").value === "usd") {
+    const usd = Number(str);
+    const price = Number($("ethPrice").value);
+    if (!isFinite(usd) || !isFinite(price) || price <= 0) return null;
+    return E.parseUnits((usd / price).toFixed(18), 18);
+  }
+  try { return E.parseEther(str); } catch (e) { return null; }
 }
 
 function parseRecipients() {
   const same = $("spreadMode").value === "same";
   let sameAmount = null;
   if (same) {
-    try { sameAmount = E.parseEther(($("sameAmount").value || "").trim()); }
-    catch (e) { $("recipSummary").innerHTML = '<span class="bad">Enter a valid amount.</span>'; return; }
+    sameAmount = parseAmountToWei(($("sameAmount").value || "").trim());
+    if (sameAmount === null) { $("recipSummary").innerHTML = '<span class="bad">Enter a valid amount.</span>'; return; }
   }
   const raw = $("recipients").value;
   const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -210,8 +237,8 @@ function parseRecipients() {
     }
     const parts = line.split(",").map((s) => s.trim());
     if (parts.length !== 2 || !E.isAddress(parts[0])) { bad++; continue; }
-    let amount;
-    try { amount = E.parseEther(parts[1]); } catch (e) { bad++; continue; }
+    const amount = parseAmountToWei(parts[1]);
+    if (amount === null) { bad++; continue; }
     next.push({ address: parts[0], amount });
   }
   recipientList = next;
@@ -292,6 +319,9 @@ $("btnLoadSource").addEventListener("click", loadSourceWallets);
 $("btnRefresh").addEventListener("click", refreshBalances);
 $("btnConsolidate").addEventListener("click", runConsolidate);
 $("btnLoadFund").addEventListener("click", loadFundWallet);
-$("spreadMode").addEventListener("change", onSpreadModeChange);
+$("spreadMode").addEventListener("change", updateRecipientUI);
+$("unitSelect").addEventListener("change", updateRecipientUI);
 $("btnParseRecipients").addEventListener("click", parseRecipients);
 $("btnSpread").addEventListener("click", runSpread);
+updateRecipientUI();
+fetchEthUsdPrice();

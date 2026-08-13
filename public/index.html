@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy"
-  content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self' https://rpc.mainnet.chain.robinhood.com https://rpc.testnet.chain.robinhood.com https://robinhoodchain.blockscout.com https://robinhoodchain.blockscout.com/api; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
+  content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self' https://rpc.mainnet.chain.robinhood.com https://rpc.testnet.chain.robinhood.com https://robinhoodchain.blockscout.com https://robinhoodchain.blockscout.com/api https://api.coingecko.com; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <title>Robinhood Chain — Wallet Consolidator / Disperser</title>
 <style>
@@ -116,6 +116,13 @@
         <option value="custom">Different amount per address</option>
         <option value="same">Same amount for all</option>
       </select>
+      <label>Amount unit</label>
+      <select id="unitSelect">
+        <option value="eth">ETH</option>
+        <option value="usd">USD</option>
+      </select>
+      <label id="ethPriceLabel" style="display:none">ETH price (USD) — auto-filled, editable</label>
+      <input id="ethPrice" style="display:none" placeholder="e.g. 3000" />
       <label id="recipLabel">One per line: <span class="kv">address,amount</span></label>
       <textarea id="recipients" placeholder="0xaaa...,0.01&#10;0xbbb...,0.02"></textarea>
       <label id="sameAmountLabel" style="display:none">Amount (sent to each address)</label>

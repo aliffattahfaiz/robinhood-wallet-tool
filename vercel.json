@@ -4,7 +4,7 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Content-Security-Policy", "value": "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self' https://rpc.mainnet.chain.robinhood.com https://rpc.testnet.chain.robinhood.com https://robinhoodchain.blockscout.com https://robinhoodchain.blockscout.com/api; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'" },
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self' https://rpc.mainnet.chain.robinhood.com https://rpc.testnet.chain.robinhood.com https://robinhoodchain.blockscout.com https://robinhoodchain.blockscout.com/api https://api.coingecko.com; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'" },
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Referrer-Policy", "value": "no-referrer" },
