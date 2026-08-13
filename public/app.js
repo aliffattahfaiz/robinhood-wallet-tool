@@ -25,6 +25,8 @@ const CHAINS = {
 
 let provider = null;
 let mode = "consolidate";
+let ethUsdPrice = 0;
+let ethIdrPrice = 0;
 
 function onChainChange() {
   const v = $("chainSelect").value;
@@ -131,6 +133,7 @@ async function runConsolidate() {
   const bufferWei = E.parseEther(($("gasBuffer").value || "0").trim());
   const p = getProvider();
   $("btnConsolidate").disabled = true;
+  let gasFees = 0n;
 
   for (const w of sourceWallets) {
     try {
@@ -154,13 +157,15 @@ async function runConsolidate() {
         ...overrides
       });
       log(esc(w.address) + " → " + esc(dest) + " : sent " + E.formatEther(sendable) + " — tx " + tx.hash, "ok");
-      await tx.wait();
+      const receipt = await tx.wait();
+      gasFees += receipt.gasUsed * (receipt.effectiveGasPrice ?? 0n);
       log(esc(w.address) + " : confirmed.", "ok");
     } catch (e) {
       log(esc(w.address) + " : failed — " + esc(e.message || String(e)), "bad");
     }
   }
   $("btnConsolidate").disabled = false;
+  if (gasFees > 0n) log(gasCostSummary(gasFees), "ok");
   refreshBalances();
 }
 
@@ -200,15 +205,26 @@ function updateRecipientUI() {
     : "0xaaa...,0.01\n0xbbb...,0.02";
 }
 
-async function fetchEthUsdPrice() {
+async function fetchEthPrices() {
   try {
-    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd");
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,idr");
     const data = await res.json();
-    const price = Number(data.ethereum && data.ethereum.usd);
-    if (isFinite(price) && price > 0) $("ethPrice").value = String(price);
+    const usd = Number(data.ethereum && data.ethereum.usd);
+    const idr = Number(data.ethereum && data.ethereum.idr);
+    if (isFinite(usd) && usd > 0) { ethUsdPrice = usd; $("ethPrice").value = String(usd); }
+    if (isFinite(idr) && idr > 0) ethIdrPrice = idr;
   } catch (e) {
     log("Could not fetch ETH price. Retrying…", "warn");
   }
+}
+
+function gasCostSummary(gasFees) {
+  if (gasFees <= 0n) return "";
+  const eth = parseFloat(E.formatEther(gasFees));
+  let s = "Gas used: " + eth.toFixed(6) + " ETH";
+  if (ethUsdPrice > 0) s += " ≈ $" + (eth * ethUsdPrice).toFixed(2);
+  if (ethIdrPrice > 0) s += " (≈ Rp " + Math.round(eth * ethIdrPrice).toLocaleString("id-ID") + ")";
+  return s;
 }
 
 function parseAmountToWei(str) {
@@ -289,6 +305,7 @@ async function runSpread() {
   let nonce = await p.getTransactionCount(fundWallet.address, "pending");
   let sent = 0;
   let failed = 0;
+  let gasFees = 0n;
   for (const r of recipientList) {
     let done = false;
     for (let attempt = 1; attempt <= 4 && !done; attempt++) {
@@ -306,7 +323,8 @@ async function runSpread() {
         sent++;
         log("→ " + esc(r.address) + " : broadcast " + E.formatEther(r.amount) + " — tx " + tx.hash, "ok");
         try {
-          await tx.wait();
+          const receipt = await tx.wait();
+          gasFees += receipt.gasUsed * (receipt.effectiveGasPrice ?? 0n);
           log("→ " + esc(r.address) + " : confirmed.", "ok");
         } catch (e) {
           log("→ " + esc(r.address) + " : broadcast but confirmation uncertain — " + esc(e.message || String(e)), "warn");
@@ -325,6 +343,7 @@ async function runSpread() {
   }
   $("btnSpread").disabled = false;
   log("Spread run complete: " + sent + " sent, " + failed + " failed.", sent && !failed ? "ok" : "warn");
+  if (gasFees > 0n) log(gasCostSummary(gasFees), "ok");
 }
 
 /* ---------- wiring (CSP: script-src 'self', no inline handlers) ---------- */
@@ -340,5 +359,5 @@ $("unitSelect").addEventListener("change", updateRecipientUI);
 $("btnParseRecipients").addEventListener("click", parseRecipients);
 $("btnSpread").addEventListener("click", runSpread);
 updateRecipientUI();
-fetchEthUsdPrice();
-setInterval(fetchEthUsdPrice, 10000);
+fetchEthPrices();
+setInterval(fetchEthPrices, 10000);
