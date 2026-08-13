@@ -179,12 +179,35 @@ function loadFundWallet() {
   }
 }
 
+function onSpreadModeChange() {
+  const same = $("spreadMode").value === "same";
+  $("sameAmount").style.display = same ? "" : "none";
+  $("sameAmountLabel").style.display = same ? "" : "none";
+  $("recipLabel").innerHTML = same
+    ? "One address per line:"
+    : 'One per line: <span class="kv">address,amount</span>';
+  $("recipients").placeholder = same
+    ? "0xaaa...\n0xbbb..."
+    : "0xaaa...,0.01\n0xbbb...,0.02";
+}
+
 function parseRecipients() {
+  const same = $("spreadMode").value === "same";
+  let sameAmount = null;
+  if (same) {
+    try { sameAmount = E.parseEther(($("sameAmount").value || "").trim()); }
+    catch (e) { $("recipSummary").innerHTML = '<span class="bad">Enter a valid amount.</span>'; return; }
+  }
   const raw = $("recipients").value;
   const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const next = [];
   let bad = 0;
   for (const line of lines) {
+    if (same) {
+      if (!E.isAddress(line)) { bad++; continue; }
+      next.push({ address: line, amount: sameAmount });
+      continue;
+    }
     const parts = line.split(",").map((s) => s.trim());
     if (parts.length !== 2 || !E.isAddress(parts[0])) { bad++; continue; }
     let amount;
@@ -269,5 +292,6 @@ $("btnLoadSource").addEventListener("click", loadSourceWallets);
 $("btnRefresh").addEventListener("click", refreshBalances);
 $("btnConsolidate").addEventListener("click", runConsolidate);
 $("btnLoadFund").addEventListener("click", loadFundWallet);
+$("spreadMode").addEventListener("change", onSpreadModeChange);
 $("btnParseRecipients").addEventListener("click", parseRecipients);
 $("btnSpread").addEventListener("click", runSpread);

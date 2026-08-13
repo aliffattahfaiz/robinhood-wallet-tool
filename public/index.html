@@ -111,8 +111,15 @@
 
     <div class="card">
       <h2>Recipients</h2>
-      <label>One per line: <span class="kv">address,amount</span></label>
+      <label>Amount mode</label>
+      <select id="spreadMode">
+        <option value="custom">Different amount per address</option>
+        <option value="same">Same amount for all</option>
+      </select>
+      <label id="recipLabel">One per line: <span class="kv">address,amount</span></label>
       <textarea id="recipients" placeholder="0xaaa...,0.01&#10;0xbbb...,0.02"></textarea>
+      <label id="sameAmountLabel" style="display:none">Amount (sent to each address)</label>
+      <input id="sameAmount" style="display:none" placeholder="0.01" />
       <div class="row" style="margin-top:8px">
         <button class="secondary" id="btnParseRecipients">Parse list</button>
       </div>
