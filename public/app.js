@@ -325,4 +325,4 @@ $("btnParseRecipients").addEventListener("click", parseRecipients);
 $("btnSpread").addEventListener("click", runSpread);
 updateRecipientUI();
 fetchEthUsdPrice();
-setInterval(fetchEthUsdPrice, 60000);
+setInterval(fetchEthUsdPrice, 10000);
