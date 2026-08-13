@@ -69,6 +69,9 @@ let vaultPass = null;
 
 function getVaultBlob() { try { return localStorage.getItem("rhwt_vault"); } catch (e) { return null; } }
 function setVaultBlob(b) { try { if (b === null) localStorage.removeItem("rhwt_vault"); else localStorage.setItem("rhwt_vault", b); } catch (e) { /* storage unavailable */ } }
+function getFails() { try { return parseInt(localStorage.getItem("rhwt_fails") || "0", 10) || 0; } catch (e) { return 0; } }
+function setFails(n) { try { localStorage.setItem("rhwt_fails", String(n)); } catch (e) { /* storage unavailable */ } }
+function clearFails() { try { localStorage.removeItem("rhwt_fails"); } catch (e) { /* storage unavailable */ } }
 function setPrefs() {
   try {
     localStorage.setItem("rhwt_prefs", JSON.stringify({
@@ -88,14 +91,39 @@ async function onVaultSubmit() {
   const pw = $("vaultPass").value;
   const blob = getVaultBlob();
   if (!blob) {
-    if (pw.length < 8) { $("vaultMsg").textContent = "Password must be at least 8 characters."; return; }
+    if (pw.length < 4) { $("vaultMsg").textContent = "Password must be at least 4 characters."; return; }
     if (pw !== $("vaultConfirm").value) { $("vaultMsg").textContent = "Passwords do not match."; return; }
     setVaultBlob(await V.encrypt(pw, "{}"));
+    clearFails();
   } else {
+    if (getFails() >= 5) {
+      setVaultBlob(null);
+      try { localStorage.removeItem("rhwt_prefs"); } catch (e) { /* storage unavailable */ }
+      vaultPass = null;
+      wipeMemory();
+      initVault();
+      $("vaultMsg").textContent = "Too many failed attempts. Saved keys were wiped.";
+      return;
+    }
     try { await V.decrypt(pw, blob); }
-    catch (e) { $("vaultMsg").textContent = "Wrong password."; return; }
+    catch (e) {
+      const n = getFails() + 1;
+      if (n >= 5) {
+        setVaultBlob(null);
+        try { localStorage.removeItem("rhwt_prefs"); } catch (e2) { /* storage unavailable */ }
+        vaultPass = null;
+        wipeMemory();
+        initVault();
+        $("vaultMsg").textContent = "Too many failed attempts. Saved keys were wiped.";
+        return;
+      }
+      setFails(n);
+      $("vaultMsg").textContent = "Wrong password. " + (5 - n) + " attempt(s) left before saved keys are wiped.";
+      return;
+    }
   }
   vaultPass = pw;
+  clearFails();
   $("vaultOverlay").style.display = "none";
   restoreAppState();
 }
