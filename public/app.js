@@ -50,6 +50,13 @@ function getProvider() {
   return provider;
 }
 
+async function getFeeOverrides() {
+  const fee = await getProvider().getFeeData();
+  return fee.gasPrice
+    ? { gasPrice: fee.gasPrice }
+    : { maxFeePerGas: fee.maxFeePerGas, maxPriorityFeePerGas: fee.maxPriorityFeePerGas };
+}
+
 function setMode(m) {
   mode = m;
   $("tabConsolidate").classList.toggle("active", m === "consolidate");
@@ -126,8 +133,8 @@ async function runConsolidate() {
     try {
       const balance = await p.getBalance(w.address);
       w.balance = balance;
-      const fee = await p.getFeeData();
-      const gasPrice = fee.gasPrice ?? fee.maxFeePerGas;
+      const overrides = await getFeeOverrides();
+      const gasPrice = overrides.gasPrice ?? overrides.maxFeePerGas;
       const gasLimit = 21000n;
       const txCost = gasPrice * gasLimit;
       const sendable = balance - txCost - bufferWei;
@@ -141,7 +148,7 @@ async function runConsolidate() {
         to: dest,
         value: sendable,
         gasLimit,
-        gasPrice
+        ...overrides
       });
       log(esc(w.address) + " → " + esc(dest) + " : sent " + E.formatEther(sendable) + " — tx " + tx.hash, "ok");
       await tx.wait();
@@ -213,27 +220,45 @@ async function runSpread() {
   if (!fundWallet || !recipientList.length) return;
   $("btnSpread").disabled = true;
   const p = getProvider();
-  let nonce = await p.getTransactionCount(fundWallet.address, "pending");
-  const fee = await p.getFeeData();
-  const gasPrice = fee.gasPrice ?? fee.maxFeePerGas;
+  const overrides = await getFeeOverrides();
+  const gasPrice = overrides.gasPrice ?? overrides.maxFeePerGas;
+  const gasLimit = 21000n;
+  const gasTotal = gasPrice * gasLimit * BigInt(recipientList.length);
 
+  let total = 0n;
+  for (const r of recipientList) total += r.amount;
+
+  const balance = await p.getBalance(fundWallet.address);
+  if (balance < total + gasTotal) {
+    log("Insufficient funds: need " + E.formatEther(total + gasTotal) + " (amounts + gas), have " + E.formatEther(balance) + ". Aborted.", "bad");
+    $("btnSpread").disabled = false;
+    return;
+  }
+
+  let nonce = await p.getTransactionCount(fundWallet.address, "pending");
+  let sent = 0;
+  let failed = 0;
   for (const r of recipientList) {
     try {
       const tx = await fundWallet.sendTransaction({
         to: r.address,
         value: r.amount,
-        gasLimit: 21000n,
-        gasPrice,
+        gasLimit,
+        ...overrides,
         nonce
       });
       nonce++;
-      log("→ " + esc(r.address) + " : sent " + E.formatEther(r.amount) + " — tx " + tx.hash, "ok");
+      sent++;
+      log("→ " + esc(r.address) + " : broadcast " + E.formatEther(r.amount) + " — tx " + tx.hash, "ok");
+      await tx.wait();
+      log("→ " + esc(r.address) + " : confirmed.", "ok");
     } catch (e) {
+      failed++;
       log("→ " + esc(r.address) + " : failed — " + esc(e.message || String(e)), "bad");
     }
   }
   $("btnSpread").disabled = false;
-  log("Spread run complete.", "ok");
+  log("Spread run complete: " + sent + " sent, " + failed + " failed.", sent && !failed ? "ok" : "warn");
 }
 
 /* ---------- wiring (CSP: script-src 'self', no inline handlers) ---------- */
