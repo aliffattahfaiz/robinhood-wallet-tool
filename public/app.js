@@ -43,6 +43,110 @@ function onChainChange() {
 }
 onChainChange();
 
+/* ---------- encrypted vault (password-protected key storage) ---------- */
+const V = {
+  b64(u) { let s = ""; for (const b of u) s += String.fromCharCode(b); return btoa(s); },
+  unb64(s) { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; },
+  async key(pw, salt) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  },
+  async encrypt(pw, plain) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const k = await this.key(pw, salt);
+    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, k, new TextEncoder().encode(plain));
+    return JSON.stringify({ s: this.b64(salt), i: this.b64(iv), c: this.b64(new Uint8Array(ct)) });
+  },
+  async decrypt(pw, blob) {
+    const o = JSON.parse(blob);
+    const k = await this.key(pw, this.unb64(o.s));
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: this.unb64(o.i) }, k, this.unb64(o.c));
+    return new TextDecoder().decode(pt);
+  }
+};
+let vaultPass = null;
+
+function getVaultBlob() { try { return localStorage.getItem("rhwt_vault"); } catch (e) { return null; } }
+function setVaultBlob(b) { try { if (b === null) localStorage.removeItem("rhwt_vault"); else localStorage.setItem("rhwt_vault", b); } catch (e) { /* storage unavailable */ } }
+function setPrefs() {
+  try {
+    localStorage.setItem("rhwt_prefs", JSON.stringify({
+      destAddr: $("destAddr").value, recipients: $("recipients").value, sameAmount: $("sameAmount").value,
+      spreadMode: $("spreadMode").value, unitSelect: $("unitSelect").value, gasBuffer: $("gasBuffer").value,
+      bufferToggle: $("bufferToggle").checked
+    }));
+  } catch (e) { /* storage unavailable */ }
+}
+function getPrefs() { try { return JSON.parse(localStorage.getItem("rhwt_prefs")); } catch (e) { return null; } }
+function saveKeysToVault() {
+  if (!vaultPass) return;
+  const payload = JSON.stringify({ src: $("srcKeys").value, fund: $("fundKey").value });
+  V.encrypt(vaultPass, payload).then(setVaultBlob).catch(() => {});
+}
+async function onVaultSubmit() {
+  const pw = $("vaultPass").value;
+  const blob = getVaultBlob();
+  if (!blob) {
+    if (pw.length < 4) { $("vaultMsg").textContent = "Password must be at least 4 characters."; return; }
+    if (pw !== $("vaultConfirm").value) { $("vaultMsg").textContent = "Passwords do not match."; return; }
+    setVaultBlob(await V.encrypt(pw, "{}"));
+  } else {
+    try { await V.decrypt(pw, blob); }
+    catch (e) { $("vaultMsg").textContent = "Wrong password."; return; }
+  }
+  vaultPass = pw;
+  $("vaultOverlay").style.display = "none";
+  restoreAppState();
+}
+async function restoreAppState() {
+  const p = getPrefs();
+  if (p) {
+    $("destAddr").value = p.destAddr || "";
+    $("recipients").value = p.recipients || "";
+    $("sameAmount").value = p.sameAmount || "";
+    $("spreadMode").value = p.spreadMode || "custom";
+    $("unitSelect").value = p.unitSelect || "eth";
+    $("gasBuffer").value = p.gasBuffer || "0.0005";
+    $("bufferToggle").checked = p.bufferToggle !== false;
+  }
+  updateRecipientUI();
+  onBufferToggle();
+  const blob = getVaultBlob();
+  if (blob && vaultPass) {
+    try {
+      const d = JSON.parse(await V.decrypt(vaultPass, blob));
+      const rpcSet = $("rpcUrl").value.trim() !== "";
+      if (d.src) { $("srcKeys").value = d.src; if (rpcSet) loadSourceWallets(); }
+      if (d.fund) { $("fundKey").value = d.fund; if (rpcSet) loadFundWallet(); }
+    } catch (e) { log("Could not restore saved wallets.", "bad"); }
+  }
+  log("Unlocked. Saved keys restored from the encrypted vault.", "ok");
+}
+function initVault() {
+  $("vaultTitle").textContent = getVaultBlob() ? "Unlock" : "Set a password";
+  $("vaultDesc").textContent = getVaultBlob()
+    ? "Enter your password to access your saved wallets."
+    : "Create a password. Private keys are encrypted with it and cleared only when you click Reset/Wipe.";
+  $("vaultConfirmLabel").style.display = getVaultBlob() ? "none" : "";
+  $("vaultConfirm").style.display = getVaultBlob() ? "none" : "";
+  $("vaultBtn").textContent = getVaultBlob() ? "Unlock" : "Create & unlock";
+  $("vaultMsg").textContent = "";
+  $("vaultOverlay").style.display = "flex";
+  $("vaultPass").focus();
+}
+async function onVaultReset() {
+  if (!confirm("Reset clears ALL saved keys and settings. Continue?")) return;
+  setVaultBlob(null);
+  try { localStorage.removeItem("rhwt_prefs"); } catch (e) { /* storage unavailable */ }
+  vaultPass = null;
+  wipeMemory();
+  initVault();
+  $("vaultMsg").textContent = "All saved data cleared. Set a new password.";
+}
+
+onChainChange();
+
 function saveNetworkPrefs() {
   try {
     localStorage.setItem("rhwt_chain", $("chainSelect").value);
@@ -79,7 +183,8 @@ function restoreNetworkPrefs() {
     if (chain || rpc) source = "cookie";
   }
   if (chain && (chain === "custom" || CHAINS[chain])) $("chainSelect").value = chain;
-  onChainChange();
+onChainChange();
+
   if (rpc) $("rpcUrl").value = rpc;
   $("rpcHint").textContent = source === "none"
     ? "No saved network settings on this URL: " + location.href
@@ -132,6 +237,7 @@ function loadSourceWallets() {
     }
   }
   sourceWallets = next;
+  saveKeysToVault(); // persist encrypted before clearing the field
   $("srcKeys").value = ""; // clear key material from the DOM immediately after loading
   $("srcSummary").innerHTML =
     '<span class="ok">' + next.length + " wallet(s) loaded.</span>" +
@@ -226,6 +332,7 @@ function loadFundWallet() {
   const p = getProvider();
   try {
     fundWallet = new E.Wallet(key, p);
+    saveKeysToVault(); // persist encrypted before clearing the field
     $("fundKey").value = "";
     $("fundSummary").innerHTML = '<span class="ok">Loaded ' + esc(fundWallet.address) + '</span> <span class="kv">— key field cleared, held in memory only</span>';
     log("Funding wallet loaded: " + fundWallet.address, "ok");
@@ -444,6 +551,9 @@ function onBufferToggle() {
 }
 
 function wipeMemory() {
+  setVaultBlob(null);
+  try { localStorage.removeItem("rhwt_prefs"); } catch (e) { /* storage unavailable */ }
+  vaultPass = null;
   sourceWallets = [];
   fundWallet = null;
   recipientList = [];
@@ -478,7 +588,16 @@ $("btnParseRecipients").addEventListener("click", parseRecipients);
 $("btnSpread").addEventListener("click", runSpread);
 $("btnWipe").addEventListener("click", wipeMemory);
 $("bufferToggle").addEventListener("change", onBufferToggle);
+$("vaultBtn").addEventListener("click", onVaultSubmit);
+$("vaultReset").addEventListener("click", onVaultReset);
+$("vaultPass").addEventListener("keydown", (e) => { if (e.key === "Enter") onVaultSubmit(); });
+$("vaultConfirm").addEventListener("keydown", (e) => { if (e.key === "Enter") onVaultSubmit(); });
+for (const id of ["destAddr", "recipients", "sameAmount", "gasBuffer"]) $(id).addEventListener("input", setPrefs);
+$("spreadMode").addEventListener("change", setPrefs);
+$("unitSelect").addEventListener("change", setPrefs);
+$("bufferToggle").addEventListener("change", setPrefs);
 restoreNetworkPrefs();
+initVault();
 updateRecipientUI();
 onBufferToggle();
 fetchEthPrices();

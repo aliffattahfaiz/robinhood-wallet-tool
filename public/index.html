@@ -39,13 +39,16 @@
   th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
   th{color:var(--muted);font-weight:500}
   .pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;border:1px solid var(--line)}
+  .vault{position:fixed;inset:0;background:rgba(8,10,13,.94);display:flex;align-items:center;justify-content:center;z-index:999}
+  .vaultBox{width:min(400px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px}
+  .vaultBox h2{margin:0 0 8px;font-size:18px}
   footer{max-width:920px;margin:0 auto;padding:0 24px 40px;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
 <header>
   <h1>Robinhood Chain — Wallet Consolidator / Disperser</h1>
-  <p>Client-side only. Private keys are never sent anywhere and never touch storage — held in memory for this tab only.</p>
+  <p>Client-side only. Private keys are encrypted locally with your password and cleared when you click Reset/Wipe. Nothing ever leaves your browser.</p>
 </header>
 <main>
 
@@ -162,12 +165,29 @@
   </div>
 
 </main>
+
+<div id="vaultOverlay" class="vault" style="display:none">
+  <div class="vaultBox">
+    <h2 id="vaultTitle">Unlock</h2>
+    <p id="vaultDesc" class="hint"></p>
+    <label id="vaultConfirmLabel" style="display:none">Confirm password</label>
+    <input id="vaultConfirm" type="password" style="display:none" autocomplete="new-password" placeholder="repeat password">
+    <label>Password</label>
+    <input id="vaultPass" type="password" autocomplete="current-password">
+    <div id="vaultMsg" class="hint"></div>
+    <div class="row" style="margin-top:12px">
+      <button id="vaultBtn">Unlock</button>
+      <button id="vaultReset" class="danger" style="flex:0 0 auto">Reset (clear saved keys)</button>
+    </div>
+  </div>
+</div>
+
 <footer>
-  Keys live only in page memory for this tab and are discarded on refresh/navigation. Always verify addresses before sending. Use wallets you can afford to lose while testing.
+  Keys are encrypted locally with your vault password and cleared when you click Reset/Wipe. Always verify addresses before sending. Use wallets you can afford to lose while testing.
   <br><span class="kv">Version: v5</span>
 </footer>
 
 <script src="vendor/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
