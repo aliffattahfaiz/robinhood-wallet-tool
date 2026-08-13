@@ -52,9 +52,12 @@ function getProvider() {
 
 async function getFeeOverrides() {
   const fee = await getProvider().getFeeData();
-  return fee.gasPrice
-    ? { gasPrice: fee.gasPrice }
-    : { maxFeePerGas: fee.maxFeePerGas, maxPriorityFeePerGas: fee.maxPriorityFeePerGas };
+  if (fee.gasPrice) return { gasPrice: fee.gasPrice };
+  const maxFeePerGas = fee.maxFeePerGas ?? (fee.gasPrice ?? 0n);
+  return {
+    maxFeePerGas: maxFeePerGas * 2n,
+    maxPriorityFeePerGas: fee.maxPriorityFeePerGas ?? 1000000000n
+  };
 }
 
 function setMode(m) {
@@ -270,15 +273,13 @@ async function runSpread() {
   if (!fundWallet || !recipientList.length) return;
   $("btnSpread").disabled = true;
   const p = getProvider();
-  const overrides = await getFeeOverrides();
-  const gasPrice = overrides.gasPrice ?? overrides.maxFeePerGas;
-  const gasLimit = 21000n;
-  const gasTotal = gasPrice * gasLimit * BigInt(recipientList.length);
 
   let total = 0n;
   for (const r of recipientList) total += r.amount;
-
   const balance = await p.getBalance(fundWallet.address);
+  const estimate = await getFeeOverrides();
+  const gasPrice = estimate.gasPrice ?? estimate.maxFeePerGas;
+  const gasTotal = gasPrice * 21000n * BigInt(recipientList.length);
   if (balance < total + gasTotal) {
     log("Insufficient funds: need " + E.formatEther(total + gasTotal) + " (amounts + gas), have " + E.formatEther(balance) + ". Aborted.", "bad");
     $("btnSpread").disabled = false;
@@ -289,22 +290,37 @@ async function runSpread() {
   let sent = 0;
   let failed = 0;
   for (const r of recipientList) {
-    try {
-      const tx = await fundWallet.sendTransaction({
-        to: r.address,
-        value: r.amount,
-        gasLimit,
-        ...overrides,
-        nonce
-      });
-      nonce++;
-      sent++;
-      log("→ " + esc(r.address) + " : broadcast " + E.formatEther(r.amount) + " — tx " + tx.hash, "ok");
-      await tx.wait();
-      log("→ " + esc(r.address) + " : confirmed.", "ok");
-    } catch (e) {
-      failed++;
-      log("→ " + esc(r.address) + " : failed — " + esc(e.message || String(e)), "bad");
+    let done = false;
+    for (let attempt = 1; attempt <= 4 && !done; attempt++) {
+      try {
+        const overrides = await getFeeOverrides();
+        const tx = await fundWallet.sendTransaction({
+          to: r.address,
+          value: r.amount,
+          gasLimit: 21000n,
+          ...overrides,
+          nonce
+        });
+        done = true;
+        nonce++;
+        sent++;
+        log("→ " + esc(r.address) + " : broadcast " + E.formatEther(r.amount) + " — tx " + tx.hash, "ok");
+        try {
+          await tx.wait();
+          log("→ " + esc(r.address) + " : confirmed.", "ok");
+        } catch (e) {
+          log("→ " + esc(r.address) + " : broadcast but confirmation uncertain — " + esc(e.message || String(e)), "warn");
+        }
+      } catch (e) {
+        const msg = e.message || String(e);
+        if (/base fee|intrinsic|underpriced|replacement|gas price/i.test(msg) && attempt < 4) {
+          log("→ " + esc(r.address) + " : fee rejected (" + msg + "), retrying…", "warn");
+        } else {
+          failed++;
+          done = true;
+          log("→ " + esc(r.address) + " : failed — " + esc(msg), "bad");
+        }
+      }
     }
   }
   $("btnSpread").disabled = false;
