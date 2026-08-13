@@ -93,7 +93,7 @@
       <h2>Destination</h2>
       <label>Send everything to</label>
       <input id="destAddr" placeholder="0x… destination address" />
-      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="bufferToggle" checked style="width:auto"> Leave gas buffer per wallet (native token)</label>
+      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="bufferToggle" style="width:auto"> Leave gas buffer per wallet (native token)</label>
       <input id="gasBuffer" value="0.0005" />
       <div class="hint">Each source wallet's full balance minus this buffer (and the exact tx fee) is swept. Wallets below the buffer are skipped automatically. Uncheck to sweep everything.</div>
       <div class="row" style="margin-top:12px">
@@ -188,6 +188,6 @@
 </footer>
 
 <script src="vendor/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous"></script>
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

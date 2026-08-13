@@ -136,7 +136,7 @@ async function restoreAppState() {
     $("spreadMode").value = p.spreadMode || "custom";
     $("unitSelect").value = p.unitSelect || "eth";
     $("gasBuffer").value = p.gasBuffer || "0.0005";
-    $("bufferToggle").checked = p.bufferToggle !== false;
+    $("bufferToggle").checked = p.bufferToggle === true;
   }
   updateRecipientUI();
   onBufferToggle();
