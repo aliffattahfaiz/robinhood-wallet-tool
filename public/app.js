@@ -235,3 +235,14 @@ async function runSpread() {
   $("btnSpread").disabled = false;
   log("Spread run complete.", "ok");
 }
+
+/* ---------- wiring (CSP: script-src 'self', no inline handlers) ---------- */
+$("tabConsolidate").addEventListener("click", () => setMode("consolidate"));
+$("tabSpread").addEventListener("click", () => setMode("spread"));
+$("chainSelect").addEventListener("change", onChainChange);
+$("btnLoadSource").addEventListener("click", loadSourceWallets);
+$("btnRefresh").addEventListener("click", refreshBalances);
+$("btnConsolidate").addEventListener("click", runConsolidate);
+$("btnLoadFund").addEventListener("click", loadFundWallet);
+$("btnParseRecipients").addEventListener("click", parseRecipients);
+$("btnSpread").addEventListener("click", runSpread);

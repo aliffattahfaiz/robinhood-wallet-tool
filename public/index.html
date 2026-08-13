@@ -49,8 +49,8 @@
 <main>
 
   <div class="tabs">
-    <button class="tab active" id="tabConsolidate" onclick="setMode('consolidate')">Consolidate → one wallet</button>
-    <button class="tab" id="tabSpread" onclick="setMode('spread')">Spread → many wallets</button>
+    <button class="tab active" id="tabConsolidate">Consolidate → one wallet</button>
+    <button class="tab" id="tabSpread">Spread → many wallets</button>
   </div>
 
   <div class="card">
@@ -58,7 +58,7 @@
     <div class="row">
       <div>
         <label>Chain</label>
-        <select id="chainSelect" onchange="onChainChange()">
+        <select id="chainSelect">
           <option value="mainnet">Robinhood Chain — Mainnet</option>
           <option value="testnet">Robinhood Chain — Testnet</option>
           <option value="custom">Custom RPC…</option>
@@ -79,8 +79,8 @@
       <textarea id="srcKeys" placeholder="0xabc123...&#10;0xdef456...&#10;(each on its own line)"></textarea>
       <div class="hint">Keys are parsed locally into wallet objects and the field is cleared immediately after loading. Nothing is persisted.</div>
       <div class="row" style="margin-top:8px">
-        <button class="secondary" onclick="loadSourceWallets()">Load wallets</button>
-        <button class="secondary" onclick="refreshBalances()" id="btnRefresh" disabled>Check balances</button>
+        <button class="secondary" id="btnLoadSource">Load wallets</button>
+        <button class="secondary" id="btnRefresh" disabled>Check balances</button>
       </div>
       <div id="srcSummary" class="hint"></div>
     </div>
@@ -93,7 +93,7 @@
       <input id="gasBuffer" value="0.0005" />
       <div class="hint">Each source wallet's full balance minus this buffer (and the exact tx fee) is swept. Wallets below the buffer are skipped automatically.</div>
       <div class="row" style="margin-top:12px">
-        <button onclick="runConsolidate()" id="btnConsolidate" disabled>Sweep all wallets to destination</button>
+        <button id="btnConsolidate" disabled>Sweep all wallets to destination</button>
       </div>
     </div>
   </div>
@@ -104,7 +104,7 @@
       <h2>Funding wallet (private key)</h2>
       <input id="fundKey" placeholder="0x… funding wallet private key" />
       <div class="row" style="margin-top:8px">
-        <button class="secondary" onclick="loadFundWallet()">Load wallet</button>
+        <button class="secondary" id="btnLoadFund">Load wallet</button>
       </div>
       <div id="fundSummary" class="hint"></div>
     </div>
@@ -114,11 +114,11 @@
       <label>One per line: <span class="kv">address,amount</span></label>
       <textarea id="recipients" placeholder="0xaaa...,0.01&#10;0xbbb...,0.02"></textarea>
       <div class="row" style="margin-top:8px">
-        <button class="secondary" onclick="parseRecipients()">Parse list</button>
+        <button class="secondary" id="btnParseRecipients">Parse list</button>
       </div>
       <div id="recipSummary" class="hint"></div>
       <div class="row" style="margin-top:12px">
-        <button onclick="runSpread()" id="btnSpread" disabled>Send to all recipients</button>
+        <button id="btnSpread" disabled>Send to all recipients</button>
       </div>
     </div>
   </div>
