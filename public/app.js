@@ -48,6 +48,8 @@ function saveNetworkPrefs() {
     localStorage.setItem("rhwt_chain", $("chainSelect").value);
     localStorage.setItem("rhwt_rpc", $("rpcUrl").value);
   } catch (e) { /* storage unavailable */ }
+  document.cookie = "rhwt_chain=" + encodeURIComponent($("chainSelect").value) + "; path=/; max-age=31536000; SameSite=Lax";
+  document.cookie = "rhwt_rpc=" + encodeURIComponent($("rpcUrl").value) + "; path=/; max-age=31536000; SameSite=Lax";
   const params = new URLSearchParams();
   params.set("chain", $("chainSelect").value);
   if ($("rpcUrl").value) params.set("rpc", $("rpcUrl").value);
@@ -64,6 +66,13 @@ function restoreNetworkPrefs() {
       chain = localStorage.getItem("rhwt_chain");
       rpc = localStorage.getItem("rhwt_rpc");
     } catch (e) { /* storage unavailable */ }
+  }
+  if (!chain && !rpc) {
+    for (const c of document.cookie.split("; ")) {
+      const [k, v] = c.split("=");
+      if (k === "rhwt_chain") chain = decodeURIComponent(v);
+      if (k === "rhwt_rpc") rpc = decodeURIComponent(v);
+    }
   }
   if (chain && (chain === "custom" || CHAINS[chain])) $("chainSelect").value = chain;
   onChainChange();
