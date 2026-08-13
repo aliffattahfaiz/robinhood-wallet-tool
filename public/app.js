@@ -162,13 +162,14 @@ async function runConsolidate() {
       });
       log(esc(w.address) + " → " + esc(dest) + " : sent " + E.formatEther(sendable) + " — tx " + tx.hash, "ok");
       const receipt = await tx.wait();
-      gasFees += receipt.gasUsed * (receipt.effectiveGasPrice ?? 0n);
+      gasFees += receipt.fee;
       log(esc(w.address) + " : confirmed.", "ok");
     } catch (e) {
       log(esc(w.address) + " : failed — " + esc(e.message || String(e)), "bad");
     }
   }
   $("btnConsolidate").disabled = false;
+  showGasSummary(gasFees);
   if (gasFees > 0n) log(gasCostSummary(gasFees), "ok");
   refreshBalances();
 }
@@ -257,6 +258,21 @@ function gasCostSummary(gasFees) {
   if (ethUsdPrice > 0) s += " ≈ $" + (eth * ethUsdPrice).toFixed(2);
   if (ethIdrPrice > 0) s += " (≈ Rp " + Math.round(eth * ethIdrPrice).toLocaleString("id-ID") + ")";
   return s;
+}
+
+function showGasSummary(gasFees) {
+  const el = $("gasSummary");
+  if (gasFees <= 0n) {
+    el.textContent = "No transactions yet.";
+    el.className = "kv";
+    return;
+  }
+  const eth = parseFloat(E.formatEther(gasFees));
+  let s = eth.toFixed(6) + " ETH";
+  if (ethUsdPrice > 0) s += " ≈ $" + (eth * ethUsdPrice).toFixed(2);
+  if (ethIdrPrice > 0) s += " (≈ Rp " + Math.round(eth * ethIdrPrice).toLocaleString("id-ID") + ")";
+  el.textContent = s;
+  el.className = "ok";
 }
 
 function parseAmountToWei(str) {
@@ -357,7 +373,7 @@ async function runSpread() {
         log("→ " + esc(r.address) + " : broadcast " + E.formatEther(r.amount) + " — tx " + tx.hash, "ok");
         try {
           const receipt = await tx.wait();
-          gasFees += receipt.gasUsed * (receipt.effectiveGasPrice ?? 0n);
+          gasFees += receipt.fee;
           log("→ " + esc(r.address) + " : confirmed.", "ok");
         } catch (e) {
           log("→ " + esc(r.address) + " : broadcast but confirmation uncertain — " + esc(e.message || String(e)), "warn");
@@ -375,6 +391,7 @@ async function runSpread() {
     }
   }
   $("btnSpread").disabled = false;
+  showGasSummary(gasFees);
   log("Spread run complete: " + sent + " sent, " + failed + " failed.", sent && !failed ? "ok" : "warn");
   if (gasFees > 0n) log(gasCostSummary(gasFees), "ok");
 }
@@ -398,6 +415,7 @@ function wipeMemory() {
   $("btnRefresh").disabled = true;
   $("btnConsolidate").disabled = true;
   $("btnSpread").disabled = true;
+  showGasSummary(0n);
   log("Memory wiped. All keys, wallets, and recipient data cleared.", "ok");
 }
 
