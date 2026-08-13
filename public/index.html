@@ -121,8 +121,8 @@
         <option value="eth">ETH</option>
         <option value="usd">USD</option>
       </select>
-      <label id="ethPriceLabel" style="display:none">ETH price (USD) — auto-filled, editable</label>
-      <input id="ethPrice" style="display:none" placeholder="e.g. 3000" />
+      <label id="ethPriceLabel" style="display:none">ETH price (USD) — auto-updating</label>
+      <input id="ethPrice" style="display:none" readonly placeholder="fetching…" />
       <label id="recipLabel">One per line: <span class="kv">address,amount</span></label>
       <textarea id="recipients" placeholder="0xaaa...,0.01&#10;0xbbb...,0.02"></textarea>
       <label id="sameAmountLabel" style="display:none">Amount (sent to each address)</label>

@@ -204,7 +204,7 @@ async function fetchEthUsdPrice() {
     const price = Number(data.ethereum && data.ethereum.usd);
     if (isFinite(price) && price > 0) $("ethPrice").value = String(price);
   } catch (e) {
-    log("Could not fetch ETH price. Enter it manually.", "warn");
+    log("Could not fetch ETH price. Retrying…", "warn");
   }
 }
 
@@ -325,3 +325,4 @@ $("btnParseRecipients").addEventListener("click", parseRecipients);
 $("btnSpread").addEventListener("click", runSpread);
 updateRecipientUI();
 fetchEthUsdPrice();
+setInterval(fetchEthUsdPrice, 60000);
