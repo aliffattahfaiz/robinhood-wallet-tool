@@ -1,0 +1,10 @@
+{
+  "name": "robinhood-wallet-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Client-side wallet consolidator / disperser for Robinhood Chain",
+  "scripts": {
+    "dev": "npx serve public",
+    "deploy": "npx vercel --prod"
+  }
+}

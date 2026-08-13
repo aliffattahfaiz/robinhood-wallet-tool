@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self' https://rpc.mainnet.chain.robinhood.com https://rpc.testnet.chain.robinhood.com https://robinhoodchain.blockscout.com https://robinhoodchain.blockscout.com/api; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Robinhood Chain — Wallet Consolidator / Disperser</title>
+<style>
+  :root{--bg:#0b0d10;--panel:#14171c;--line:#242830;--txt:#e7e9ec;--muted:#8b93a1;--acc:#20c997;--warn:#e0a800;--bad:#e05555;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header{padding:20px 24px;border-bottom:1px solid var(--line)}
+  header h1{margin:0;font-size:18px}
+  header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  main{max-width:920px;margin:0 auto;padding:20px 24px 80px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+  .card h2{margin:0 0 12px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .tabs{display:flex;gap:8px;margin-bottom:16px}
+  .tab{flex:1;padding:10px;text-align:center;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:transparent;color:var(--txt);font-size:14px}
+  .tab.active{border-color:var(--acc);color:var(--acc);background:rgba(32,201,151,.08)}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+  textarea,input,select{width:100%;background:#0e1013;border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:9px 10px;font-family:var(--mono);font-size:13px}
+  textarea{min-height:110px;resize:vertical}
+  .row{display:flex;gap:10px}
+  .row > *{flex:1}
+  button{background:var(--acc);color:#04211a;border:none;border-radius:8px;padding:11px 16px;font-weight:600;cursor:pointer;font-size:14px}
+  button.secondary{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .kv{color:var(--muted)}
+  .ok{color:var(--acc)}
+  .warn{color:var(--warn)}
+  .bad{color:var(--bad)}
+  #log{font-family:var(--mono);font-size:12.5px;background:#0e1013;border:1px solid var(--line);border-radius:8px;padding:10px;max-height:320px;overflow:auto;white-space:pre-wrap}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:500}
+  .pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;border:1px solid var(--line)}
+  footer{max-width:920px;margin:0 auto;padding:0 24px 40px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Robinhood Chain — Wallet Consolidator / Disperser</h1>
+  <p>Client-side only. Private keys are never sent anywhere and never touch storage — held in memory for this tab only.</p>
+</header>
+<main>
+
+  <div class="tabs">
+    <button class="tab active" id="tabConsolidate" onclick="setMode('consolidate')">Consolidate → one wallet</button>
+    <button class="tab" id="tabSpread" onclick="setMode('spread')">Spread → many wallets</button>
+  </div>
+
+  <div class="card">
+    <h2>Network</h2>
+    <div class="row">
+      <div>
+        <label>Chain</label>
+        <select id="chainSelect" onchange="onChainChange()">
+          <option value="mainnet">Robinhood Chain — Mainnet</option>
+          <option value="testnet">Robinhood Chain — Testnet</option>
+          <option value="custom">Custom RPC…</option>
+        </select>
+      </div>
+      <div>
+        <label>RPC URL</label>
+        <input id="rpcUrl" placeholder="https://rpc.mainnet.chain.robinhood.com" />
+      </div>
+    </div>
+    <div class="hint" id="rpcHint"></div>
+  </div>
+
+  <!-- CONSOLIDATE MODE -->
+  <div id="panelConsolidate">
+    <div class="card">
+      <h2>Source wallets (private keys, one per line)</h2>
+      <textarea id="srcKeys" placeholder="0xabc123...&#10;0xdef456...&#10;(each on its own line)"></textarea>
+      <div class="hint">Keys are parsed locally into wallet objects and the field is cleared immediately after loading. Nothing is persisted.</div>
+      <div class="row" style="margin-top:8px">
+        <button class="secondary" onclick="loadSourceWallets()">Load wallets</button>
+        <button class="secondary" onclick="refreshBalances()" id="btnRefresh" disabled>Check balances</button>
+      </div>
+      <div id="srcSummary" class="hint"></div>
+    </div>
+
+    <div class="card">
+      <h2>Destination</h2>
+      <label>Send everything to</label>
+      <input id="destAddr" placeholder="0x… destination address" />
+      <label>Gas buffer per wallet (kept unswept, in native token)</label>
+      <input id="gasBuffer" value="0.0005" />
+      <div class="hint">Each source wallet's full balance minus this buffer (and the exact tx fee) is swept. Wallets below the buffer are skipped automatically.</div>
+      <div class="row" style="margin-top:12px">
+        <button onclick="runConsolidate()" id="btnConsolidate" disabled>Sweep all wallets to destination</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPREAD MODE -->
+  <div id="panelSpread" style="display:none">
+    <div class="card">
+      <h2>Funding wallet (private key)</h2>
+      <input id="fundKey" placeholder="0x… funding wallet private key" />
+      <div class="row" style="margin-top:8px">
+        <button class="secondary" onclick="loadFundWallet()">Load wallet</button>
+      </div>
+      <div id="fundSummary" class="hint"></div>
+    </div>
+
+    <div class="card">
+      <h2>Recipients</h2>
+      <label>One per line: <span class="kv">address,amount</span></label>
+      <textarea id="recipients" placeholder="0xaaa...,0.01&#10;0xbbb...,0.02"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="secondary" onclick="parseRecipients()">Parse list</button>
+      </div>
+      <div id="recipSummary" class="hint"></div>
+      <div class="row" style="margin-top:12px">
+        <button onclick="runSpread()" id="btnSpread" disabled>Send to all recipients</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Wallets / recipients</h2>
+    <div id="tableWrap"><span class="hint">Nothing loaded yet.</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Log</h2>
+    <div id="log"></div>
+  </div>
+
+</main>
+<footer>
+  Keys live only in page memory for this tab and are discarded on refresh/navigation. Always verify addresses before sending. Use wallets you can afford to lose while testing.
+</footer>
+
+<script src="vendor/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous"></script>
+<script src="app.js"></script>
+</body>
+</html>
