@@ -129,7 +129,11 @@ function renderSourceTable() {
 async function runConsolidate() {
   const dest = $("destAddr").value.trim();
   if (!E.isAddress(dest)) { log("Destination address is not valid.", "bad"); return; }
-  const bufferWei = E.parseEther(($("gasBuffer").value || "0").trim());
+  let bufferWei = 0n;
+  if ($("bufferToggle").checked) {
+    try { bufferWei = E.parseEther(($("gasBuffer").value || "0").trim()); }
+    catch (e) { log("Invalid gas buffer value.", "bad"); return; }
+  }
   const p = getProvider();
   $("btnConsolidate").disabled = true;
   let gasFees = 0n;
@@ -345,6 +349,10 @@ async function runSpread() {
   if (gasFees > 0n) log(gasCostSummary(gasFees), "ok");
 }
 
+function onBufferToggle() {
+  $("gasBuffer").disabled = !$("bufferToggle").checked;
+}
+
 function wipeMemory() {
   sourceWallets = [];
   fundWallet = null;
@@ -376,6 +384,8 @@ $("unitSelect").addEventListener("change", updateRecipientUI);
 $("btnParseRecipients").addEventListener("click", parseRecipients);
 $("btnSpread").addEventListener("click", runSpread);
 $("btnWipe").addEventListener("click", wipeMemory);
+$("bufferToggle").addEventListener("change", onBufferToggle);
 updateRecipientUI();
+onBufferToggle();
 fetchEthPrices();
 setInterval(fetchEthPrices, 10000);
