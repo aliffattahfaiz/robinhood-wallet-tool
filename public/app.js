@@ -47,18 +47,27 @@ function saveNetworkPrefs() {
   try {
     localStorage.setItem("rhwt_chain", $("chainSelect").value);
     localStorage.setItem("rhwt_rpc", $("rpcUrl").value);
-    $("rpcHint").textContent = "RPC saved — will be restored on reload.";
   } catch (e) { /* storage unavailable */ }
+  const params = new URLSearchParams();
+  params.set("chain", $("chainSelect").value);
+  if ($("rpcUrl").value) params.set("rpc", $("rpcUrl").value);
+  history.replaceState(null, "", "?" + params.toString());
+  $("rpcHint").textContent = "RPC saved — will be restored on reload.";
 }
 
 function restoreNetworkPrefs() {
-  try {
-    const chain = localStorage.getItem("rhwt_chain");
-    const rpc = localStorage.getItem("rhwt_rpc");
-    if (chain && (chain === "custom" || CHAINS[chain])) $("chainSelect").value = chain;
-    onChainChange();
-    if (rpc) $("rpcUrl").value = rpc;
-  } catch (e) { /* storage unavailable */ }
+  const params = new URLSearchParams(location.search);
+  let chain = params.get("chain");
+  let rpc = params.get("rpc");
+  if (!chain && !rpc) {
+    try {
+      chain = localStorage.getItem("rhwt_chain");
+      rpc = localStorage.getItem("rhwt_rpc");
+    } catch (e) { /* storage unavailable */ }
+  }
+  if (chain && (chain === "custom" || CHAINS[chain])) $("chainSelect").value = chain;
+  onChainChange();
+  if (rpc) $("rpcUrl").value = rpc;
 }
 
 function getProvider() {
