@@ -27,6 +27,7 @@ let provider = null;
 let mode = "consolidate";
 let ethUsdPrice = 0;
 let ethIdrPrice = 0;
+let priceWarned = false;
 
 function onChainChange() {
   const v = $("chainSelect").value;
@@ -144,7 +145,7 @@ async function runConsolidate() {
       w.balance = balance;
       const overrides = await getFeeOverrides();
       const gasPrice = overrides.gasPrice ?? overrides.maxFeePerGas;
-      const gasLimit = 21000n;
+      const gasLimit = await estimateTransferGas(p, w.address, dest);
       const txCost = gasPrice * gasLimit;
       const sendable = balance - txCost - bufferWei;
 
@@ -209,15 +210,43 @@ function updateRecipientUI() {
 }
 
 async function fetchEthPrices() {
+  const sources = [
+    async () => {
+      const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,idr");
+      const d = await r.json();
+      return { usd: Number(d.ethereum && d.ethereum.usd), idr: Number(d.ethereum && d.ethereum.idr) };
+    },
+    async () => {
+      const r = await fetch("https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD,IDR");
+      const d = await r.json();
+      return { usd: Number(d.USD), idr: Number(d.IDR) };
+    }
+  ];
+  for (const src of sources) {
+    try {
+      const v = await src();
+      if (isFinite(v.usd) && v.usd > 0) {
+        ethUsdPrice = v.usd;
+        ethIdrPrice = isFinite(v.idr) && v.idr > 0 ? v.idr : 0;
+        $("ethPrice").value = String(v.usd);
+        priceWarned = false;
+        return;
+      }
+    } catch (e) { /* try next source */ }
+  }
+  if (!priceWarned) {
+    log("Could not fetch ETH price. Will keep retrying.", "warn");
+    priceWarned = true;
+  }
+}
+
+async function estimateTransferGas(p, from, to) {
   try {
-    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,idr");
-    const data = await res.json();
-    const usd = Number(data.ethereum && data.ethereum.usd);
-    const idr = Number(data.ethereum && data.ethereum.idr);
-    if (isFinite(usd) && usd > 0) { ethUsdPrice = usd; $("ethPrice").value = String(usd); }
-    if (isFinite(idr) && idr > 0) ethIdrPrice = idr;
+    const est = await p.estimateGas({ from, to, value: 0n });
+    const buffered = (est * 120n) / 100n;
+    return buffered < 21000n ? 21000n : buffered;
   } catch (e) {
-    log("Could not fetch ETH price. Retrying…", "warn");
+    return 21000n;
   }
 }
 
@@ -298,7 +327,8 @@ async function runSpread() {
   const balance = await p.getBalance(fundWallet.address);
   const estimate = await getFeeOverrides();
   const gasPrice = estimate.gasPrice ?? estimate.maxFeePerGas;
-  const gasTotal = gasPrice * 21000n * BigInt(recipientList.length);
+  const gasLimit = await estimateTransferGas(p, fundWallet.address, recipientList[0].address);
+  const gasTotal = gasPrice * gasLimit * BigInt(recipientList.length);
   if (balance < total + gasTotal) {
     log("Insufficient funds: need " + E.formatEther(total + gasTotal) + " (amounts + gas), have " + E.formatEther(balance) + ". Aborted.", "bad");
     $("btnSpread").disabled = false;
@@ -317,7 +347,7 @@ async function runSpread() {
         const tx = await fundWallet.sendTransaction({
           to: r.address,
           value: r.amount,
-          gasLimit: 21000n,
+          gasLimit,
           ...overrides,
           nonce
         });
