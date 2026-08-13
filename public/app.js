@@ -66,6 +66,7 @@ const V = {
   }
 };
 let vaultPass = null;
+let idleLock = false;
 
 function getVaultBlob() { try { return localStorage.getItem("rhwt_vault"); } catch (e) { return null; } }
 function setVaultBlob(b) { try { if (b === null) localStorage.removeItem("rhwt_vault"); else localStorage.setItem("rhwt_vault", b); } catch (e) { /* storage unavailable */ } }
@@ -125,6 +126,7 @@ async function onVaultSubmit() {
   vaultPass = pw;
   clearFails();
   $("vaultOverlay").style.display = "none";
+  if (idleLock) { idleLock = false; resetIdle(); return; }
   restoreAppState();
   resetIdle();
 }
@@ -635,20 +637,9 @@ let idleTimer = null;
 function lockAfterIdle() {
   if (!vaultPass) return;
   vaultPass = null;
-  sourceWallets = [];
-  fundWallet = null;
-  recipientList = [];
-  for (const id of ["srcKeys", "fundKey", "recipients", "sameAmount", "destAddr", "gasBuffer"]) $(id).value = "";
-  $("tableWrap").innerHTML = '<span class="hint">Nothing loaded yet.</span>';
-  $("srcSummary").innerHTML = "";
-  $("fundSummary").innerHTML = "";
-  $("recipSummary").innerHTML = "";
-  $("btnRefresh").disabled = true;
-  $("btnConsolidate").disabled = true;
-  $("btnSpread").disabled = true;
-  showGasSummary(0n);
+  idleLock = true;
   initVault();
-  log("Idle for 10 minutes — locked. Re-enter your password to restore saved wallets.", "warn");
+  log("Idle for 10 minutes — locked. Re-enter your password to continue.", "warn");
 }
 function resetIdle() {
   clearTimeout(idleTimer);
