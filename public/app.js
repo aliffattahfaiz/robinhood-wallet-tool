@@ -43,6 +43,23 @@ function onChainChange() {
 }
 onChainChange();
 
+function saveNetworkPrefs() {
+  try {
+    localStorage.setItem("rhwt_chain", $("chainSelect").value);
+    localStorage.setItem("rhwt_rpc", $("rpcUrl").value);
+  } catch (e) { /* storage unavailable */ }
+}
+
+function restoreNetworkPrefs() {
+  try {
+    const chain = localStorage.getItem("rhwt_chain");
+    const rpc = localStorage.getItem("rhwt_rpc");
+    if (chain && (chain === "custom" || CHAINS[chain])) $("chainSelect").value = chain;
+    onChainChange();
+    if (rpc) $("rpcUrl").value = rpc;
+  } catch (e) { /* storage unavailable */ }
+}
+
 function getProvider() {
   const url = $("rpcUrl").value.trim();
   if (!url) throw new Error("Set an RPC URL first.");
@@ -422,7 +439,8 @@ function wipeMemory() {
 /* ---------- wiring (CSP: script-src 'self', no inline handlers) ---------- */
 $("tabConsolidate").addEventListener("click", () => setMode("consolidate"));
 $("tabSpread").addEventListener("click", () => setMode("spread"));
-$("chainSelect").addEventListener("change", onChainChange);
+$("chainSelect").addEventListener("change", () => { onChainChange(); saveNetworkPrefs(); });
+$("rpcUrl").addEventListener("input", saveNetworkPrefs);
 $("btnLoadSource").addEventListener("click", loadSourceWallets);
 $("btnRefresh").addEventListener("click", refreshBalances);
 $("btnConsolidate").addEventListener("click", runConsolidate);
@@ -433,6 +451,7 @@ $("btnParseRecipients").addEventListener("click", parseRecipients);
 $("btnSpread").addEventListener("click", runSpread);
 $("btnWipe").addEventListener("click", wipeMemory);
 $("bufferToggle").addEventListener("change", onBufferToggle);
+restoreNetworkPrefs();
 updateRecipientUI();
 onBufferToggle();
 fetchEthPrices();
