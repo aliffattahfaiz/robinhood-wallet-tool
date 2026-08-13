@@ -28,6 +28,7 @@
   button{background:var(--acc);color:#04211a;border:none;border-radius:8px;padding:11px 16px;font-weight:600;cursor:pointer;font-size:14px}
   button.secondary{background:transparent;border:1px solid var(--line);color:var(--txt)}
   button:disabled{opacity:.5;cursor:not-allowed}
+  button.danger{background:var(--bad);color:#fff}
   .hint{font-size:12px;color:var(--muted);margin-top:6px}
   .kv{color:var(--muted)}
   .ok{color:var(--acc)}
@@ -145,6 +146,14 @@
   <div class="card">
     <h2>Log</h2>
     <div id="log"></div>
+  </div>
+
+  <div class="card">
+    <h2>Privacy</h2>
+    <div class="hint">Clears all loaded wallets, private keys, recipient lists, log, and summaries from this page's memory. Keys are never persisted to storage — this also nulls the in-memory wallet objects.</div>
+    <div class="row" style="margin-top:12px">
+      <button id="btnWipe" class="danger">Wipe all memory</button>
+    </div>
   </div>
 
 </main>

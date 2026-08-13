@@ -346,6 +346,24 @@ async function runSpread() {
   if (gasFees > 0n) log(gasCostSummary(gasFees), "ok");
 }
 
+function wipeMemory() {
+  sourceWallets = [];
+  fundWallet = null;
+  recipientList = [];
+  for (const id of ["srcKeys", "fundKey", "recipients", "sameAmount", "destAddr", "gasBuffer"]) {
+    $(id).value = "";
+  }
+  $("log").innerHTML = "";
+  $("tableWrap").innerHTML = '<span class="hint">Nothing loaded yet.</span>';
+  $("srcSummary").innerHTML = "";
+  $("fundSummary").innerHTML = "";
+  $("recipSummary").innerHTML = "";
+  $("btnRefresh").disabled = true;
+  $("btnConsolidate").disabled = true;
+  $("btnSpread").disabled = true;
+  log("Memory wiped. All keys, wallets, and recipient data cleared.", "ok");
+}
+
 /* ---------- wiring (CSP: script-src 'self', no inline handlers) ---------- */
 $("tabConsolidate").addEventListener("click", () => setMode("consolidate"));
 $("tabSpread").addEventListener("click", () => setMode("spread"));
@@ -358,6 +376,7 @@ $("spreadMode").addEventListener("change", updateRecipientUI);
 $("unitSelect").addEventListener("change", updateRecipientUI);
 $("btnParseRecipients").addEventListener("click", parseRecipients);
 $("btnSpread").addEventListener("click", runSpread);
+$("btnWipe").addEventListener("click", wipeMemory);
 updateRecipientUI();
 fetchEthPrices();
 setInterval(fetchEthPrices, 10000);
