@@ -54,10 +54,9 @@ function getProvider() {
 
 async function getFeeOverrides() {
   const fee = await getProvider().getFeeData();
-  if (fee.gasPrice) return { gasPrice: fee.gasPrice };
-  const maxFeePerGas = fee.maxFeePerGas ?? (fee.gasPrice ?? 0n);
+  if (fee.maxFeePerGas == null) return { gasPrice: fee.gasPrice };
   return {
-    maxFeePerGas: maxFeePerGas * 2n,
+    maxFeePerGas: fee.maxFeePerGas * 2n,
     maxPriorityFeePerGas: fee.maxPriorityFeePerGas ?? 1000000000n
   };
 }
