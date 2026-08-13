@@ -47,6 +47,7 @@ function saveNetworkPrefs() {
   try {
     localStorage.setItem("rhwt_chain", $("chainSelect").value);
     localStorage.setItem("rhwt_rpc", $("rpcUrl").value);
+    $("rpcHint").textContent = "RPC saved — will be restored on reload.";
   } catch (e) { /* storage unavailable */ }
 }
 
@@ -441,6 +442,7 @@ $("tabConsolidate").addEventListener("click", () => setMode("consolidate"));
 $("tabSpread").addEventListener("click", () => setMode("spread"));
 $("chainSelect").addEventListener("change", () => { onChainChange(); saveNetworkPrefs(); });
 $("rpcUrl").addEventListener("input", saveNetworkPrefs);
+$("rpcUrl").addEventListener("blur", saveNetworkPrefs);
 $("btnLoadSource").addEventListener("click", loadSourceWallets);
 $("btnRefresh").addEventListener("click", refreshBalances);
 $("btnConsolidate").addEventListener("click", runConsolidate);
