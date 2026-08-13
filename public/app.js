@@ -126,6 +126,7 @@ async function onVaultSubmit() {
   clearFails();
   $("vaultOverlay").style.display = "none";
   restoreAppState();
+  resetIdle();
 }
 async function restoreAppState() {
   const p = getPrefs();
@@ -627,6 +628,36 @@ $("bufferToggle").addEventListener("change", setPrefs);
 restoreNetworkPrefs();
 initVault();
 updateRecipientUI();
+
+/* ---------- idle lock: re-ask for the password after 10 min without interaction ---------- */
+const IDLE_MS = 10 * 60 * 1000;
+let idleTimer = null;
+function lockAfterIdle() {
+  if (!vaultPass) return;
+  vaultPass = null;
+  sourceWallets = [];
+  fundWallet = null;
+  recipientList = [];
+  for (const id of ["srcKeys", "fundKey", "recipients", "sameAmount", "destAddr", "gasBuffer"]) $(id).value = "";
+  $("tableWrap").innerHTML = '<span class="hint">Nothing loaded yet.</span>';
+  $("srcSummary").innerHTML = "";
+  $("fundSummary").innerHTML = "";
+  $("recipSummary").innerHTML = "";
+  $("btnRefresh").disabled = true;
+  $("btnConsolidate").disabled = true;
+  $("btnSpread").disabled = true;
+  showGasSummary(0n);
+  initVault();
+  log("Idle for 10 minutes — locked. Re-enter your password to restore saved wallets.", "warn");
+}
+function resetIdle() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(lockAfterIdle, IDLE_MS);
+}
+for (const ev of ["mousemove", "mousedown", "keydown", "click", "scroll", "touchstart", "wheel"]) {
+  document.addEventListener(ev, resetIdle, { passive: true });
+}
+resetIdle();
 onBufferToggle();
 fetchEthPrices();
 setInterval(fetchEthPrices, 10000);
