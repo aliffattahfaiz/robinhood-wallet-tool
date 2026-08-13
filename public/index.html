@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy"
-  content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self' https:; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
+  content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self' https:; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <meta name="referrer" content="no-referrer">
 <title>Robinhood Chain — Wallet Consolidator / Disperser — v5</title>
 <style>
@@ -80,7 +80,7 @@
   <div id="panelConsolidate">
     <div class="card">
       <h2>Source wallets (private keys, one per line)</h2>
-      <textarea id="srcKeys" placeholder="0xabc123...&#10;0xdef456...&#10;(each on its own line)"></textarea>
+      <textarea id="srcKeys" placeholder="0xabc123...&#10;0xdef456...&#10;(each on its own line)" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
       <div class="hint">Keys are parsed locally into wallet objects and the field is cleared immediately after loading. Nothing is persisted.</div>
       <div class="row" style="margin-top:8px">
         <button class="secondary" id="btnLoadSource">Load wallets</button>
@@ -106,7 +106,7 @@
   <div id="panelSpread" style="display:none">
     <div class="card">
       <h2>Funding wallet (private key)</h2>
-      <input id="fundKey" placeholder="0x… funding wallet private key" />
+      <input id="fundKey" placeholder="0x… funding wallet private key" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" />
       <div class="row" style="margin-top:8px">
         <button class="secondary" id="btnLoadFund">Load wallet</button>
       </div>
@@ -188,6 +188,6 @@
 </footer>
 
 <script src="vendor/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous"></script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

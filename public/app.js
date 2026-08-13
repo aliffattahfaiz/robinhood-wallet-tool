@@ -88,7 +88,7 @@ async function onVaultSubmit() {
   const pw = $("vaultPass").value;
   const blob = getVaultBlob();
   if (!blob) {
-    if (pw.length < 4) { $("vaultMsg").textContent = "Password must be at least 4 characters."; return; }
+    if (pw.length < 8) { $("vaultMsg").textContent = "Password must be at least 8 characters."; return; }
     if (pw !== $("vaultConfirm").value) { $("vaultMsg").textContent = "Passwords do not match."; return; }
     setVaultBlob(await V.encrypt(pw, "{}"));
   } else {
@@ -152,8 +152,8 @@ function saveNetworkPrefs() {
     localStorage.setItem("rhwt_chain", $("chainSelect").value);
     localStorage.setItem("rhwt_rpc", $("rpcUrl").value);
   } catch (e) { /* storage unavailable */ }
-  document.cookie = "rhwt_chain=" + encodeURIComponent($("chainSelect").value) + "; path=/; max-age=31536000; SameSite=Lax";
-  document.cookie = "rhwt_rpc=" + encodeURIComponent($("rpcUrl").value) + "; path=/; max-age=31536000; SameSite=Lax";
+  document.cookie = "rhwt_chain=" + encodeURIComponent($("chainSelect").value) + "; path=/; max-age=31536000; SameSite=Lax; Secure";
+  document.cookie = "rhwt_rpc=" + encodeURIComponent($("rpcUrl").value) + "; path=/; max-age=31536000; SameSite=Lax; Secure";
   const params = new URLSearchParams();
   params.set("chain", $("chainSelect").value);
   if ($("rpcUrl").value) params.set("rpc", $("rpcUrl").value);
