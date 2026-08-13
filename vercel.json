@@ -10,6 +10,14 @@
         { "key": "Referrer-Policy", "value": "no-referrer" },
         { "key": "Permissions-Policy", "value": "geolocation=(), camera=(), microphone=()" }
       ]
+    },
+    {
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    },
+    {
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
     }
   ]
 }
